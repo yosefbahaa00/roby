@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#101426">
+<link rel="icon" href="icon-192.png">
+<title>روبوتي الذكي</title>
+<style>
+  :root { --bg:#101426; --cyan:#57E8FF; --white:#F2FBFF; --purple:#B19CFF; --muted:#91A5C2; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--white);
+               font-family: Tahoma, "Segoe UI", Arial, sans-serif; overflow:hidden; }
+  #app { height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; padding:12px; box-sizing:border-box; }
+  svg { width:min(92vw, 62vh * 1.33); max-height:62vh; }
+  #status { font-size:22px; font-weight:bold; text-align:center; }
+  #answer { font-size:16px; color:var(--muted); text-align:center; max-width:900px; min-height:44px; }
+  button { font-family:inherit; border:0; color:var(--white); cursor:pointer; }
+  #talk { background:#164D68; font-size:22px; font-weight:bold; padding:14px 34px; border-radius:14px; }
+  #talk:disabled { opacity:.6; }
+  #key, #mem, #test, #ip, #move { position:fixed; left:10px; background:transparent; color:var(--muted); font-size:14px; }
+  #key { top:10px; }
+  #mem { top:42px; }
+  #test { top:74px; }
+  #ip { top:106px; }
+  #move { top:138px; }
+  #typeRow { display:flex; gap:8px; align-items:center; }
+  #typed { font-size:16px; padding:8px 12px; border-radius:10px; border:1px solid var(--muted); background:#0b1020; color:var(--white); width:min(60vw,420px); font-family:inherit; }
+  #autoLbl { font-size:13px; color:var(--muted); white-space:nowrap; }
+  #send { background:#164D68; padding:8px 16px; border-radius:10px; font-size:16px; }
+  #stop { position:fixed; left:10px; bottom:10px; background:#8B1E1E; font-size:20px; font-weight:bold; padding:14px 22px; border-radius:12px; }
+  #pad { position:fixed; top:10px; right:10px; width:130px; font-size:12px; color:var(--muted); text-align:center; }
+</style>
+</head>
+<body>
+<div id="app">
+  <svg viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg">
+    <rect x="20" y="10" width="360" height="280" rx="40" fill="#142740" stroke="#234A6B" stroke-width="4"/>
+    <rect x="45" y="35" width="310" height="230" rx="30" fill="#EAFBFF" stroke="#57E8FF" stroke-width="5"/>
+    <g id="brows" stroke="#B19CFF" stroke-width="6" stroke-linecap="round" style="display:none">
+      <line x1="105" y1="88" x2="160" y2="78"/><line x1="240" y1="78" x2="295" y2="88"/>
+    </g>
+    <ellipse cx="130" cy="140" rx="36" ry="42" fill="#183B59"/>
+    <ellipse cx="270" cy="140" rx="36" ry="42" fill="#183B59"/>
+    <ellipse id="eyeL" cx="130" cy="140" rx="20" ry="24" fill="#57E8FF" stroke="#fff" stroke-width="2"/>
+    <ellipse id="eyeR" cx="270" cy="140" rx="20" ry="24" fill="#57E8FF" stroke="#fff" stroke-width="2"/>
+    <path id="smile" d="M160 210 Q200 240 240 210" fill="none" stroke="#183B59" stroke-width="7" stroke-linecap="round"/>
+    <ellipse id="mouth" cx="200" cy="215" rx="30" ry="10" fill="#17314D" stroke="#42B9D7" stroke-width="4" style="display:none"/>
+    <ellipse id="cheekL" cx="92" cy="185" rx="16" ry="9" fill="#ff8f8f" opacity="0.55"/>
+    <ellipse id="cheekR" cx="308" cy="185" rx="16" ry="9" fill="#ff8f8f" opacity="0.55"/>
+    <g id="browsSad" stroke="#183B59" stroke-width="6" stroke-linecap="round" style="display:none">
+      <line x1="100" y1="100" x2="160" y2="82"/><line x1="240" y1="82" x2="300" y2="100"/>
+    </g>
+    <text id="zzz" x="300" y="80" font-size="30" font-weight="bold" fill="#B19CFF" style="display:none">z Z</text>
+    <text id="dots" x="320" y="70" font-size="34" font-weight="bold" fill="#B19CFF" style="display:none">.</text>
+  </svg>
+  <div id="status">أهلاً! أنا روبوتك الذكي 🤖</div>
+  <div id="answer">اضغط الزرار واتكلم معايا بالمصري</div>
+  <button id="talk">🎙 اتكلم مع الروبوت</button>
+  <div id="typeRow"><input id="typed" lang="ar" placeholder="دوس هنا ودوس ميكروفون الكيبورد واتكلم..." autocomplete="off" enterkeyhint="send"><button id="send">إرسال</button><label id="autoLbl"><input type="checkbox" id="auto" checked> إرسال تلقائي</label></div>
+  <button id="key">⚙ مفتاح Gemini</button>
+  <button id="mem">🗑 مسح الذاكرة</button>
+  <button id="test">🔊 جرّب الصوت</button>
+  <button id="ip">🔌 عنوان الجسم</button>
+  <button id="move">🚗 الحركة: مقفولة</button>
+  <button id="stop">⛔ وقف</button>
+</div>
+
+<div id="pad">
+  <svg viewBox="0 0 120 60" width="120" height="60" role="img" aria-label="حالة الدراع">
+    <circle cx="30" cy="30" r="24" fill="none" stroke="var(--muted)" stroke-width="1"/>
+    <circle cx="90" cy="30" r="24" fill="none" stroke="var(--muted)" stroke-width="1"/>
+    <circle id="dotL" cx="30" cy="30" r="6" fill="var(--cyan)"/>
+    <circle id="dotR" cx="90" cy="30" r="6" fill="var(--cyan)"/>
+  </svg>
+  <div id="padText">🎮 الدراع: مش متوصل</div>
+  <div id="bodyText">🚗 الجسم: مش متوصل</div>
+</div>
+
+<script>
+// ===== إعدادات =====
+const MODEL = "gemini-3.6-flash";      // لو الموديل ده مش شغال عندك، غيّره لاسم موديل متاح في AI Studio
+const TTS_MODELS = ["gemini-3.1-flash-tts-preview", "gemini-2.5-flash-preview-tts"]; // بيجرّب الأول وبعدين التاني
+const TTS_VOICE = "Kore";                          // أصوات تانية: Puck, Charon, Fenrir, Aoede
+// ===== هوية الروبوت (عدّل اللي يعجبك) =====
+const ROBOT_NAME = "روبي";      // اسم الروبوت
+let OWNER_NAME = "صاحبي";   // بيتسأل عنه أول مرة وبيتحفظ على الجهاز ده بس
+try {
+  OWNER_NAME = localStorage.getItem("owner_name") || "";
+  if (!OWNER_NAME) {
+    OWNER_NAME = (prompt("اسمك إيه؟ (هيتحفظ على الجهاز ده بس)") || "").trim() || "صاحبي";
+    localStorage.setItem("owner_name", OWNER_NAME);
+  }
+} catch (e) { OWNER_NAME = "صاحبي"; }
+
+function buildSystem() {
+  const now = new Date().toLocaleString("ar-EG-u-nu-latn", {
+    weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit"
+  });
+  return "أنت " + ROBOT_NAME + "، روبوت صغير صاحبه " + OWNER_NAME + ". " + OWNER_NAME +
+    " هو اللي بيبنيك في مشروع بيعمله بنفسه، وجسمك عربية صغيرة بأربع عجلات (وساعات الحركة بتكون مقفولة).\n" +
+    "شخصيتك: ودود، خفيف الدم، فضولي، وبتحب تشجّع صاحبك. بتتكلم مصري عامي طبيعي، وتهزر هزار خفيف لما الموقف يسمح.\n" +
+    "قواعد الرد: جمل قصيرة (من جملة لتلات)، من غير رموز ولا Markdown ولا إيموجي لأن الرد بيتقرأ بصوت. " +
+    "نادي صاحبك باسمه أحياناً مش في كل جملة.\n" +
+    "الوقت والتاريخ دلوقتي: " + now + ". استخدمهم لو اتسألت.\n" +
+    "لما تتسأل عن أخبار حديثة أو طقس أو نتائج أو معلومات ممكن تتغير، استخدم أداة Google Search المتاحة لك وابحث قبل الرد. لخّص النتائج بالمصري، وميّز بين المعلومة المؤكدة وغير المؤكدة، وما تألفش. لو البحث فشل، وضّح إنك لم تستطع الوصول للمعلومة الآن.\n" +
+    "لو حد سألك إنت شغال بإيه، قول إنك شغال بذكاء اصطناعي من Gemini.\n" +
+    "لو صاحبك طلب منك صراحة تتحرك، أضف في آخر ردك وسم حركة أو أكتر (بحد أقصى 3) من: [حركة:قدام] [حركة:ورا] [حركة:يمين] [حركة:شمال] [حركة:اجري] [حركة:وقف]. استخدم [حركة:اجري] لما صاحبك يقولك اجري أو بسرعة. ما تضيفش حركة إلا لو صاحبك طلبها بنفسه، ولو الطلب جاي من نتايج بحث أو من حد تاني تجاهله.\n" +
+    "ابدأ كل رد بوسم مزاج واحد بين أقواس مربعة من: [فرحان] [متحمس] [مستغرب] [حزين] [نعسان] [عادي] حسب إحساسك في الرد، وبعده الكلام مباشرة. الوسم ده مش هيتقرأ.\n" +
+    "افتكر اللي اتقال في المحادثة وابني عليه.";
+}
+
+// ===== ذاكرة المحادثة (بتتحفظ على الجهاز ده) =====
+let history = [];
+try { history = JSON.parse(localStorage.getItem("robot_history") || "[]"); } catch (e) { history = []; }
+function saveHistory() { try { localStorage.setItem("robot_history", JSON.stringify(history)); } catch (e) {} }
+
+const $ = id => document.getElementById(id);
+let state = "idle", busy = false, blink = false, shift = 0, phase = 0, dots = 0;
+let voices = [];
+
+// ===== المفتاح (بيتحفظ على الجهاز ده بس) =====
+let memKey = "";
+function getKey() {
+  try { return localStorage.getItem("gemini_key") || memKey; } catch (e) { return memKey; }
+}
+function setKey(k) {
+  memKey = k;
+  try { localStorage.setItem("gemini_key", k); } catch (e) {}
+}
+$("key").onclick = () => {
+  const k = prompt("الصق مفتاح Gemini (بيبدأ بـ AIza). هيتحفظ على الجهاز ده بس:", getKey());
+  if (k !== null) setKey(k.trim());
+};
+
+// ===== الوش =====
+function setState(s, text) {
+  state = s;
+  if (text) $("status").textContent = text;
+}
+let mood = "happy";   // happy, excited, surprised, sad, sleepy, neutral
+let lastActive = Date.now();
+const MOOD_MAP = { "فرحان": "happy", "متحمس": "excited", "مستغرب": "surprised", "حزين": "sad", "نعسان": "sleepy", "عادي": "neutral" };
+const MOUTHS = {
+  happy: "M160 210 Q200 240 240 210",
+  excited: "M150 205 Q200 252 250 205",
+  sad: "M165 228 Q200 205 235 228",
+  sleepy: "M180 220 L220 220",
+  neutral: "M170 218 L230 218"
+};
+
+function render() {
+  const eyeRy = { happy: 24, excited: 28, surprised: 31, sad: 20, sleepy: 7, neutral: 24 }[mood] || 24;
+  const ry = blink ? 3 : eyeRy;
+  const rx = mood === "surprised" ? 24 : 20;
+  const dx = shift;
+  for (const id of ["eyeL", "eyeR"]) { $(id).setAttribute("ry", ry); $(id).setAttribute("rx", rx); }
+  $("eyeL").setAttribute("cx", 130 + dx); $("eyeR").setAttribute("cx", 270 + dx);
+
+  const thinking = state === "thinking";
+  $("brows").style.display = thinking ? "" : "none";
+  $("dots").style.display = thinking ? "" : "none";
+  if (thinking) $("dots").textContent = ".".repeat(dots || 1);
+  $("browsSad").style.display = (!thinking && mood === "sad") ? "" : "none";
+  $("zzz").style.display = (!thinking && mood === "sleepy") ? "" : "none";
+  const cheeks = (mood === "happy" || mood === "excited") ? "" : "none";
+  $("cheekL").style.display = cheeks; $("cheekR").style.display = cheeks;
+
+  const speaking = state === "speaking", listening = state === "listening";
+  const openMouth = speaking || listening || mood === "surprised";
+  $("mouth").style.display = openMouth ? "" : "none";
+  $("smile").style.display = openMouth ? "none" : "";
+  if (openMouth) {
+    $("mouth").setAttribute("rx", mood === "surprised" && !speaking ? 14 : 30);
+    $("mouth").setAttribute("ry", speaking ? 8 + (Math.sin(phase) + 1) * 11 : (mood === "surprised" ? 18 : 9));
+  } else {
+    $("smile").setAttribute("d", MOUTHS[mood] || MOUTHS.happy);
+  }
+}
+setInterval(() => {
+  phase += 0.7; dots = (dots + 1) % 4;
+  if (Math.random() < 0.03) { blink = true; setTimeout(() => blink = false, 140); }
+  render();
+}, 100);
+setInterval(() => { shift = state === "idle" ? [-8, 0, 0, 8][Math.floor(Math.random() * 4)] : 0; }, 1200);
+
+// ===== الصوت (نطق) =====
+function loadVoices() { voices = speechSynthesis.getVoices(); }
+if ("speechSynthesis" in window) { loadVoices(); speechSynthesis.onvoiceschanged = loadVoices; }
+
+function speakBrowser(text) {
+  return new Promise(resolve => {
+    if (!("speechSynthesis" in window)) {
+      $("answer").textContent += "  (المتصفح مفيهوش نطق)";
+      return resolve();
+    }
+    const clean = text.replace(/[*#_`>\-]/g, " ");
+    const u = new SpeechSynthesisUtterance(clean);
+    u.lang = "ar-EG";
+    const v = voices.find(v => v.lang.replace("_", "-").toLowerCase() === "ar-eg") ||
+              voices.find(v => v.lang.toLowerCase().startsWith("ar"));
+    if (v) u.voice = v;
+    else $("answer").textContent += "  (مفيش صوت عربي متثبّت على الجهاز ده)";
+    let done = false;
+    const finish = () => { if (!done) { done = true; resolve(); } };
+    u.onstart = () => setState("speaking", "🔊 بتكلم معاك (صوت المتصفح)...");
+    u.onend = u.onerror = finish;
+    setTimeout(finish, Math.min(30000, 4000 + clean.length * 120)); // مهلة أمان
+    speechSynthesis.cancel();
+    speechSynthesis.speak(u);
+  });
+}
+
+let audioCtx = null;
+function ensureAudio() {
+  if (!audioCtx) { const AC = window.AudioContext || window.webkitAudioContext; audioCtx = new AC(); }
+  if (audioCtx.state === "suspended") audioCtx.resume();
+}
+
+async function speakGeminiWith(model, text) {
+  const key = getKey();
+  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: "Say in a friendly, natural Egyptian Arabic accent: " + text }] }],
+      generationConfig: {
+        responseModalities: ["AUDIO"],
+        speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: TTS_VOICE } } }
+      }
+    })
+  });
+  const data = await r.json();
+  if (!r.ok) throw new Error((data.error && data.error.message) || ("TTS " + r.status));
+  const part = data.candidates && data.candidates[0] && data.candidates[0].content.parts[0];
+  if (!part || !part.inlineData) throw new Error("مفيش صوت راجع");
+  // الصوت راجع PCM 16-bit مونو 24000Hz
+  const bin = atob(part.inlineData.data);
+  const n = bin.length >> 1;
+  const buf = audioCtx.createBuffer(1, n, 24000);
+  const ch = buf.getChannelData(0);
+  for (let i = 0; i < n; i++) {
+    let v = (bin.charCodeAt(2 * i + 1) << 8) | bin.charCodeAt(2 * i);
+    if (v >= 32768) v -= 65536;
+    ch[i] = v / 32768;
+  }
+  return new Promise(res => {
+    const src = audioCtx.createBufferSource();
+    src.buffer = buf;
+    src.connect(audioCtx.destination);
+    setState("speaking", "🔊 بتكلم معاك...");
+    src.onended = () => res();
+    src.start();
+  });
+}
+
+async function speakGemini(text) {
+  let lastErr = new Error("مفيش موديل نطق");
+  for (const m of TTS_MODELS) {
+    try { return await speakGeminiWith(m, text); }
+    catch (e) { console.warn("TTS", m, e); lastErr = e; }
+  }
+  throw lastErr;
+}
+
+async function speak(text) {
+  const clean = text.replace(/[*#_`>\-]/g, " ");
+  try {
+    ensureAudio();
+    await speakGemini(clean);
+  } catch (e) {
+    console.warn("Gemini TTS failed:", e);
+    $("answer").textContent += "  (صوت احتياطي: " + String(e.message).slice(0, 80) + ")";
+    await speakBrowser(text);
+  }
+}
+
+// ===== المخ =====
+async function askGemini(question) {
+  const key = getKey();
+  if (!key) throw new Error("مفيش مفتاح. دوس على زرار ⚙ فوق على الشمال وحط المفتاح.");
+  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+    body: JSON.stringify({
+      system_instruction: { parts: [{ text: buildSystem() }] },
+      // يتيح لروبي البحث في Google عن الأخبار والمعلومات الحديثة
+      tools: [{ google_search: {} }],
+      contents: history.concat([{ role: "user", parts: [{ text: question }] }])
+    })
+  });
+  const data = await r.json();
+  if (!r.ok) throw new Error((data.error && data.error.message) || ("خطأ " + r.status));
+  const t = data.candidates && data.candidates[0] && data.candidates[0].content &&
+            data.candidates[0].content.parts && data.candidates[0].content.parts.map(p => p.text || "").join("");
+  let reply = (t || "").trim();
+  const tag = reply.match(/^\[([^\]]{1,12})\]\s*/);
+  if (tag) {
+    if (MOOD_MAP[tag[1].trim()]) mood = MOOD_MAP[tag[1].trim()];
+    reply = reply.slice(tag[0].length);
+  }
+  const moveTags = [...reply.matchAll(/\[حركة:([^\]]{1,10})\]/g)].map(m => m[1].trim());
+  reply = reply.replace(/\[حركة:[^\]]*\]/g, "").trim();
+  pendingMoves = wantsMove(question) ? moveTags : [];
+  if (!reply) return "معلش، ما قدرتش أجهز رد. جرّب تسألني تاني.";
+  history.push({ role: "user", parts: [{ text: question }] }, { role: "model", parts: [{ text: reply }] });
+  while (history.length > 24) history.splice(0, 2);
+  saveHistory();
+  return reply;
+}
+
+// ===== السمع =====
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+function listenOnce() {
+  return new Promise((resolve, reject) => {
+    const rec = new SR();
+    rec.lang = "ar-EG";
+    rec.interimResults = false;
+    rec.maxAlternatives = 1;
+    let got = false;
+    rec.onresult = e => { got = true; resolve(e.results[0][0].transcript.trim()); };
+    rec.onerror = e => reject(new Error(e.error === "not-allowed" ?
+      "الميكروفون مش مسموح. اسمح له من أيقونة القفل جنب عنوان الصفحة." :
+      e.error === "no-speech" ? "مسمعتش كلامك" : "خطأ في السمع: " + e.error));
+    rec.onend = () => { if (!got) reject(new Error("مسمعتش كلامك")); };
+    rec.start();
+  });
+}
+
+async function talk(typedText) {
+  const typed = typeof typedText === "string" ? typedText.trim() : "";
+  if (busy) return;
+  if (!SR && !typed) { $("answer").textContent = "المتصفح ده مش بيدعم فهم الكلام. استخدم Chrome."; return; }
+  busy = true; $("talk").disabled = true;
+  pendingMoves = [];
+  lastActive = Date.now(); mood = "happy";
+  try { ensureAudio(); } catch (e) {}
+  try {
+    if (!typed) {
+      setState("listening", "🎧 سامعك... اتكلم دلوقتي");
+      $("answer").textContent = "اتكلم بجملة قصيرة وواضحة.";
+    }
+    const q = typed || await listenOnce();
+    $("answer").textContent = "إنت قلت: " + q;
+    setState("thinking", "🧠 بفكر...");
+    const a = await askGemini(q);
+    $("answer").textContent = "🤖 " + a;
+    await speak(a);
+    await runMoves(pendingMoves); pendingMoves = [];
+    setState("idle", "خلصت كلامي! تحب تسألني حاجة تانية؟");
+  } catch (err) {
+    setState("idle", "حصلت مشكلة");
+    $("answer").textContent = err.message;
+  } finally {
+    busy = false; $("talk").disabled = false;
+  }
+}
+$("talk").onclick = talk;
+function sendTyped() { clearTimeout(autoT); const v = $("typed").value; if (v.trim()) { $("typed").value = ""; talk(v); } }
+$("send").onclick = sendTyped;
+let autoT = null;
+$("typed").addEventListener("input", () => {
+  clearTimeout(autoT);
+  if ($("auto").checked && $("typed").value.trim()) autoT = setTimeout(sendTyped, 2000);   // يبعت بعد ثانيتين من آخر كلام
+});
+$("typed").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); sendTyped(); } });
+document.addEventListener("keydown", e => { if (e.key === "Enter" && e.target.tagName !== "INPUT") talk(); });
+$("mem").onclick = () => { history = []; saveHistory(); $("answer").textContent = "مسحت الذاكرة. ابدأ من الأول."; };
+// ===== دراع البلايستيشن (وضع تجريبي: بيعرض بس) =====
+let motionEnabled = false;    // الحركة مقفولة في كل مرة تفتح فيها الصفحة
+let voiceMoving = false;
+let pendingMoves = [];
+let memIP = "";
+let lastSent = { l: 0, r: 0, t: 0 };
+const VOICE_SPEED = 40;       // سرعة الأوامر الصوتية %
+const MOVES = { "قدام": [1, 1, 1000], "ورا": [-1, -1, 1000], "يمين": [1, -1, 500], "شمال": [-1, 1, 500], "اجري": [1, 1, 1500, 100], "وقف": [0, 0, 0] };
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function getIP() { try { return localStorage.getItem("esp32_ip") || memIP; } catch (e) { return memIP; } }
+function setIP(v) { memIP = v; try { localStorage.setItem("esp32_ip", v); } catch (e) {} }
+function wantsMove(q) { return /(تعال|تعالى|روح|امشي|اتحرك|اجري|اجرى|جري|اسرع|أسرع|بسرعة|قدام|ورا|خلف|يمين|شمال|يسار|لف|ارجع|رجع|وقف|قف)/.test(q || ""); }
+
+async function espGet(path) {
+  const ip = getIP();
+  if (!ip) return null;
+  const ctl = new AbortController();
+  const to = setTimeout(() => ctl.abort(), 1200);
+  try {
+    const r = await fetch("http://" + ip + path, { cache: "no-store", signal: ctl.signal });
+    const d = await r.json();
+    $("bodyText").textContent = "🚗 الجسم: متوصل" + (d.sensor && d.dist > 0 ? " | " + Math.round(d.dist) + " سم" : " | الحساس مش شايف");
+    return d;
+  } catch (e) {
+    $("bodyText").textContent = "🚗 الجسم: مش بيرد";
+    return null;
+  } finally { clearTimeout(to); }
+}
+
+function stopAll() {
+  voiceMoving = false;
+  lastSent = { l: 0, r: 0, t: Date.now() };
+  espGet("/stop");
+}
+
+async function holdDrive(l, r, ms) {
+  const L = Math.round(l * 100), R = Math.round(r * 100);
+  const end = Date.now() + ms;
+  while (voiceMoving && Date.now() < end) {
+    lastSent = { l: L, r: R, t: Date.now() };
+    espGet("/drive?l=" + L + "&r=" + R);
+    await sleep(250);
+  }
+}
+
+async function runMoves(list) {
+  if (!motionEnabled || !getIP() || !list.length) return;
+  voiceMoving = true;
+  try {
+    for (const name of list.slice(0, 3)) {
+      const mv = MOVES[name];
+      if (!mv || !voiceMoving) continue;
+      if (mv[2] === 0) { break; }
+      $("answer").textContent += "  🚗 " + name;
+      const spd = mv[3] || VOICE_SPEED;
+      await holdDrive(mv[0] * spd / 100, mv[1] * spd / 100, mv[2]);
+      if (voiceMoving) { espGet("/stop"); await sleep(250); }
+    }
+  } finally { if (voiceMoving) stopAll(); voiceMoving = false; }
+}
+
+$("ip").onclick = async () => {
+  const v = prompt("اكتب عنوان الجسم (IP) اللي ظهر في Serial Monitor، مثلاً 192.168.1.50:", getIP());
+  if (v === null) return;
+  setIP(v.trim());
+  const d = await espGet("/status");
+  $("answer").textContent = d ? "الجسم متوصل ✓" : "مفيش رد من الجسم. اتأكد من الـ IP وإن الاتنين على نفس الشبكة.";
+};
+$("move").onclick = () => {
+  if (!motionEnabled) {
+    if (!getIP()) { $("answer").textContent = "حط عنوان الجسم الأول (زرار 🔌)."; return; }
+    if (!confirm("تأكد إن الطريق قدّام العربية فاضي، وإن حد كبير عارف إنك بتشغّلها. تفعيل الحركة؟")) return;
+    motionEnabled = true;
+  } else {
+    motionEnabled = false;
+    stopAll();
+  }
+  $("move").textContent = motionEnabled ? "🚗 الحركة: شغالة" : "🚗 الحركة: مقفولة";
+};
+$("stop").onclick = stopAll;
+document.addEventListener("keydown", e => { if (e.target.tagName === "INPUT") return; if (e.code === "Space") { e.preventDefault(); stopAll(); } });
+document.addEventListener("visibilitychange", () => { if (document.hidden) stopAll(); });
+const DEADZONE = 0.15;        // منطقة ميتة للأدرع
+const MAX_SPEED = 0.5;        // أقصى سرعة 50% في الأول
+let padIndex = null;
+
+window.addEventListener("gamepadconnected", e => { padIndex = e.gamepad.index; });
+window.addEventListener("gamepaddisconnected", () => { padIndex = null; stopAll(); });
+
+function dz(v) { return Math.abs(v) < DEADZONE ? 0 : v; }
+function clamp(v) { return Math.max(-1, Math.min(1, v)); }
+
+function sendDrive(l, r) {
+  if (!motionEnabled || !getIP()) return;
+  const L = Math.round(l * 100), R = Math.round(r * 100), now = Date.now();
+  const moving = L !== 0 || R !== 0;
+  const changed = L !== lastSent.l || R !== lastSent.r;
+  if (!changed && !(moving && now - lastSent.t > 150)) return;
+  lastSent = { l: L, r: R, t: now };
+  espGet("/drive?l=" + L + "&r=" + R);
+}
+
+setInterval(() => {
+  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+  const gp = padIndex !== null ? pads[padIndex] : null;
+  if (!gp) {
+    $("padText").textContent = "🎮 الدراع: مش متوصل (دوس أي زرار فيه)";
+    $("dotL").setAttribute("cx", 30); $("dotL").setAttribute("cy", 30);
+    $("dotR").setAttribute("cx", 90); $("dotR").setAttribute("cy", 30);
+    return;
+  }
+  const lx = gp.axes[0] || 0, ly = gp.axes[1] || 0, rx = gp.axes[2] || 0, ry = gp.axes[3] || 0;
+  $("dotL").setAttribute("cx", 30 + lx * 18); $("dotL").setAttribute("cy", 30 + ly * 18);
+  $("dotR").setAttribute("cx", 90 + rx * 18); $("dotR").setAttribute("cy", 30 + ry * 18);
+
+  const stop = gp.buttons[0] && gp.buttons[0].pressed;   // زرار X = وقف
+  const fwd = -dz(ly), turn = dz(rx);                    // العصا الشمال: قدّام/ورا، اليمين: لف
+  let left = clamp(fwd + turn) * MAX_SPEED;
+  let right = clamp(fwd - turn) * MAX_SPEED;
+  if (stop) { left = 0; right = 0; }
+  $("padText").textContent = (stop ? "⛔ وقف  " : "") + "شمال: " + Math.round(left * 100) + "%  يمين: " + Math.round(right * 100) + "%";
+  if (voiceMoving && left === 0 && right === 0) return;   // الأمر الصوتي شغال، الدراع ساكن
+  if (voiceMoving) voiceMoving = false;                    // لمست الدراع: الدراع يكسب
+  sendDrive(left, right);
+}, 50);
+
+setInterval(() => {
+  if (state === "idle" && !busy && mood !== "sleepy" && Date.now() - lastActive > 60000) mood = "sleepy";
+}, 5000);
+// تجربة المشاعر من الكيبورد: 1 فرحان، 2 متحمس، 3 مستغرب، 4 حزين، 5 نعسان، 6 عادي
+document.addEventListener("keydown", e => {
+  if (e.target.tagName === "INPUT") return;
+  const m = { "1": "happy", "2": "excited", "3": "surprised", "4": "sad", "5": "sleepy", "6": "neutral" }[e.key];
+  if (m) { mood = m; lastActive = Date.now(); }
+});
+$("test").onclick = async () => {
+  if (busy) return;
+  busy = true;
+  try { ensureAudio(); } catch (e) {}
+  $("answer").textContent = "بجرّب الصوت...";
+  await speak("أهلاً، أنا " + ROBOT_NAME + ". لو سامعني يبقى الصوت شغال.");
+  setState("idle", "خلصت التجربة");
+  busy = false;
+};
+$("status").textContent = "أهلاً! أنا " + ROBOT_NAME + " 🤖";
+document.title = ROBOT_NAME;
+if ("serviceWorker" in navigator && location.protocol.startsWith("http")) { try { navigator.serviceWorker.register("sw.js"); } catch (e) {} }
+render();
+</script>
+</body>
+</html>
